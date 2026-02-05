@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: notes-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn app:app --chdir backend --bind 0.0.0.0:$PORT
+
+  - type: web
+    name: notez-frontend
+    env: node
+    plan: free
+    buildCommand: cd notez && npm install && npm run build
+    startCommand: cd notez && npm run start
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        value: "https://<YOUR_BACKEND_URL>"
