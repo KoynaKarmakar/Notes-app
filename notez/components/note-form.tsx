@@ -1,54 +1,56 @@
-'use client';
-
-import React from "react"
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+"use client";
+import { useState } from "react";
+import { API_BASE } from "../lib/config";
 
 interface NoteFormProps {
-  onAddNote: (content: string) => void;
+  onNoteAdded: () => void;
 }
 
-export default function NoteForm({ onAddNote }: NoteFormProps) {
-  const [input, setInput] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export const NoteForm = ({ onNoteAdded }: NoteFormProps) => {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
-      setIsSubmitting(true);
-      // Simulate brief loading state for better UX
-      setTimeout(() => {
-        onAddNote(input.trim());
-        setInput('');
-        setIsSubmitting(false);
-      }, 100);
+
+    const payload = { title, content };
+    console.log("Frontend sending:", payload);
+
+    try {
+      const response = await fetch(`${API_BASE}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        onNoteAdded();
+        setTitle("");
+        setContent("");
+      }
+    } catch (err) {
+      console.error("Failed to save:", err);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label htmlFor="note-input" className="text-sm font-medium text-foreground">
-          Add a new note
-        </label>
-        <textarea
-          id="note-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Write your thoughts here..."
-          className="w-full rounded-lg border border-border bg-card px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-          rows={4}
-          disabled={isSubmitting}
-        />
-      </div>
-      <Button
-        type="submit"
-        disabled={!input.trim() || isSubmitting}
-        className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-      >
-        {isSubmitting ? 'Adding...' : 'Add Note'}
-      </Button>
+    <form onSubmit={handleSubmit} className="flex flex-col mb-8 border rounded-md overflow-hidden bg-white shadow-sm">
+      <input
+        placeholder="Note Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="p-3 border-b outline-none font-bold"
+      />
+      <textarea
+        placeholder="Take a note..."
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        className="p-3 h-32 outline-none resize-none"
+        required
+      />
+      <button type="submit" className="bg-blue-600 text-white py-2 hover:bg-blue-700 font-bold transition-all">
+        Save Note
+      </button>
     </form>
   );
-}
+};

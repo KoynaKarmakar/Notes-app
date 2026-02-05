@@ -1,83 +1,32 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import NoteForm from '@/components/note-form';
-import NotesList from '@/components/notes-list';
+import { useEffect, useState } from "react";
+import { API_BASE } from "../lib/config";
+import { NoteForm } from "@/components/note-form";
+import { NotesList } from "@/components/notes-list";
 
-interface Note {
-  id: string;
-  content: string;
-  createdAt: Date;
-}
+export default function Page() {
+  const [notes, setNotes] = useState([]);
 
-export default function HomePage() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const API_BASE_URL = 'http://localhost:5000';
-
-  // Fetch all notes on page load
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/notes`)
-      .then((res) => res.json())
-      .then((data) => {
-        const parsedNotes = data.map((note: any) => ({
-          ...note,
-          createdAt: new Date(note.createdAt),
-        }));
-        setNotes(parsedNotes);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, []);
-
-  // Add a new note
-  const addNote = async (content: string) => {
-    const res = await fetch(`${API_BASE_URL}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
-
-    const newNote = await res.json();
-    newNote.createdAt = new Date(newNote.createdAt);
-
-    setNotes((prev) => [newNote, ...prev]);
+  const fetchNotes = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/notes`);
+      const data = await res.json();
+      setNotes(data);
+    } catch (e) { console.error(e); }
   };
 
-  // Delete a note
-  const deleteNote = async (id: string) => {
-    await fetch(`${API_BASE_URL}/notes/${id}`, {
-      method: 'DELETE',
-    });
-
-    setNotes((prev) => prev.filter((note) => note.id !== id));
-  };
+  useEffect(() => { fetchNotes(); }, []);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">
-          Notes Management App
-        </h1>
-        <p className="text-muted-foreground">
-          Create, view, and delete notes using a Flask REST API
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto p-8 font-sans">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Notes Management App</h1>
+        <p className="text-gray-500 mt-2">Create, view, and delete notes using a Flask REST API</p>
+      </header>
 
-      <NoteForm onAddNote={addNote} />
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading notes...</p>
-      ) : notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No notes yet. Add your first note above.
-        </p>
-      ) : (
-        <NotesList notes={notes} onDeleteNote={deleteNote} />
-      )}
-    </main>
+      <NoteForm onNoteAdded={fetchNotes} />
+      <NotesList notes={notes} onNoteDeleted={fetchNotes} />
+    </div>
   );
 }

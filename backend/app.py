@@ -1,70 +1,58 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import json
 import os
-import uuid
-from datetime import datetime
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from uuid import uuid4
 
 app = Flask(__name__)
+# This allows your Next.js app to talk to Flask
 CORS(app)
 
-DATA_FILE = "notes.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, 'notes.json')
 
-
-def load_notes():
+def load_data():
     if not os.path.exists(DATA_FILE):
         return []
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    with open(DATA_FILE, 'r') as f:
+        try:
+            return json.load(f)
+        except:
+            return []
 
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
 
-def save_notes(notes):
-    with open(DATA_FILE, "w") as f:
-        json.dump(notes, f, indent=2)
-
-
-@app.route("/notes", methods=["GET"])
+@app.route('/notes', methods=['GET'])
 def get_notes():
-    notes = load_notes()
-    return jsonify(notes)
+    return jsonify(load_data()), 200
 
-
-@app.route("/notes", methods=["POST"])
+@app.route('/notes', methods=['POST'])
 def add_note():
-    data = request.get_json()
-
-    if not data or "content" not in data:
-        return jsonify({"error": "Note content is required"}), 400
-
+    notes = load_data()
+    data = request.json
+    
+    # DEBUG PRINT: Watch your terminal when you click save!
+    print(f"Backend received: {data}")
+    
     new_note = {
-        "id": str(uuid.uuid4()),
-        "content": data["content"],
-        "createdAt": datetime.utcnow().isoformat()
+        "id": str(uuid4()),
+        "title": data.get('title', 'Untitled'),
+        "content": data.get('content', '')
     }
-
-    notes = load_notes()
-    notes.insert(0, new_note)
-    save_notes(notes)
-
+    
+    notes.append(new_note)
+    save_data(notes)
     return jsonify(new_note), 201
 
+@app.route('/notes/<id>', methods=['DELETE'])
+def delete_note(id):
+    notes = load_data()
+    updated_notes = [n for n in notes if n['id'] != id]
+    save_data(updated_notes)
+    return '', 204
 
-@app.route("/notes/<note_id>", methods=["DELETE"])
-def delete_note(note_id):
-    notes = load_notes()
-    filtered_notes = [note for note in notes if note["id"] != note_id]
-
-    if len(notes) == len(filtered_notes):
-        return jsonify({"error": "Note not found"}), 404
-
-    save_notes(filtered_notes)
-    return jsonify({"message": "Note deleted"}), 200
-
-
-@app.route("/")
-def health_check():
-    return jsonify({"status": "Notes API running"})
-    
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    # Using 5001 to avoid the Mac AirPlay conflict
+    app.run(host='0.0.0.0', port=5001, debug=True)
